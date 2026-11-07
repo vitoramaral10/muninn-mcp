@@ -1,19 +1,81 @@
+<div align="center">
+
+<img src="docs/assets/logo.svg" alt="Muninn logo: the letter M drawn as a graph of linked notes" width="128" height="128">
+
 # Muninn
 
-[![ci](https://github.com/vitoramaral10/muninn-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/vitoramaral10/muninn-mcp/actions/workflows/ci.yml)
-[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+**Long-term memory for AI assistants, kept as plain Markdown files.**
 
-**A long-term memory for AI assistants, kept as plain Markdown files.** Muninn is an [MCP](https://modelcontextprotocol.io) server in one static Rust binary. It searches, reads and writes a folder of Markdown notes through twelve `mem_*` tools.
+An [MCP](https://modelcontextprotocol.io) server in one static Rust binary: hybrid search, a knowledge graph and safe writes over a folder of notes you can open in any editor.
 
-Muninn is Odin's raven of memory.
+[![ci](https://github.com/vitoramaral10/muninn-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/vitoramaral10/muninn-mcp/actions/workflows/ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) ![Rust](https://img.shields.io/badge/rust-1.99-orange.svg?logo=rust) ![image](https://img.shields.io/badge/image-7%20MB-4c5fd7.svg?logo=docker&logoColor=white) ![MCP](https://img.shields.io/badge/MCP-streamable%20HTTP-6d8cff.svg)
 
-## Why
+[Quick start](#quick-start) · [How it works](#how-it-works) · [Tools](#tools) · [Docs](#documentation)
 
-- **Your notes stay yours.** Each note is a Markdown file with YAML frontmatter, readable in any editor and versionable with git. The index next to them is derived: delete it and it is rebuilt.
-- **Search that understands the question.** Hybrid search fuses full-text (BM25, accent-insensitive) with embeddings from any OpenAI-compatible server, by reciprocal rank. "How do we ship the API?" finds the note that only says "deploy the backend with docker compose".
-- **A knowledge graph from plain lists.** `- [decision] Use Postgres #db` is an observation, and `- depends_on [[Auth service]]` is a relation. `mem_context` walks the graph in both directions.
-- **Small and quick.** A 7 MB image that runs in about 50 MiB. On one 170-note base, hybrid search answers in 0.6 s.
-- **Edits from anywhere.** A scan every 15 seconds picks up changes made by an editor, `git pull` or a sync tool. Writes through the tools are atomic and guarded by checksums.
+</div>
+
+---
+
+*In Norse myth, Odin sends two ravens out over the world each day: Huginn, thought, and Muninn, memory. Odin feared more for Muninn.*
+
+Your assistant forgets everything when the conversation ends. Muninn gives it somewhere to write things down and a way to find them again: decisions, preferences, how a system was set up, why a bug happened. Everything lands in a folder of Markdown files that **you** own, read and version.
+
+```text
+you   ▸ How strong should the coffee be?
+model ▸ mem_search { "query": "how strong should the coffee be?" }
+        → food/coffee-brewing.md  §Method
+          - [ratio] 1:16 coffee to water, by weight (adjust for the roast)
+model ▸ Your note says 1:16 by weight, adjusted for the roast.
+```
+
+The note never says "strong". Hybrid search matches it by meaning.
+
+## Highlights
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**📝 Your notes stay yours**<br>
+Each note is a Markdown file with YAML frontmatter, readable in any editor and versionable with git. The index next to them is derived: delete it and it is rebuilt.
+
+</td>
+<td width="50%" valign="top">
+
+**🔎 Search that understands the question**<br>
+Full-text BM25 (accent-insensitive) fused with embeddings from any OpenAI-compatible server by reciprocal rank. Exact names and vague questions both land.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**🕸️ A knowledge graph from plain lists**<br>
+`- [decision] Use Postgres #db` is an observation; `- depends_on [[Auth service]]` is a relation. `mem_context` walks the graph in both directions.
+
+</td>
+<td valign="top">
+
+**🪶 Small and quick**<br>
+A 7 MB image on `scratch` that runs in about 50 MiB. On a 170-note base, hybrid search answers in 0.6 s.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**🔄 Edits from anywhere**<br>
+A scan every 15 seconds picks up changes from an editor, `git pull` or a sync tool. Only what changed is re-embedded.
+
+</td>
+<td valign="top">
+
+**🛡️ Safe by default**<br>
+Atomic writes guarded by checksums, paths locked to the notes folder, a read-only mode that removes the write tools, and a warning when a write repeats a fact already saved.
+
+</td>
+</tr>
+</table>
 
 ## Quick start
 
@@ -25,15 +87,76 @@ docker run -d --name muninn -p 127.0.0.1:8000:8000 \
   -v "$PWD/notes:/notes" -v muninn-data:/data muninn-mcp
 ```
 
-This serves text search over `./notes` at `http://127.0.0.1:8000/mcp` (streamable HTTP). For meaning search, add an embedding server and set `EMBED_URL`. [`docker-compose.example.yml`](docker-compose.example.yml) runs both together.
-
-Then connect a client. With Claude Code:
+Muninn now serves text search over `./notes` at `http://127.0.0.1:8000/mcp` (streamable HTTP). Connect a client:
 
 ```sh
 claude mcp add --transport http muninn http://127.0.0.1:8000/mcp
 ```
 
-Any MCP client that speaks streamable HTTP works the same way. Then see [Using Muninn](docs/usage.md) for how to write and find notes.
+<details>
+<summary>Other MCP clients</summary>
+
+Any client that speaks streamable HTTP works. In a JSON config such as `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "muninn": { "type": "http", "url": "http://127.0.0.1:8000/mcp" }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Search by meaning (embeddings)</summary>
+
+Point `EMBED_URL` at any OpenAI-compatible `/v1/embeddings` server. [`docker-compose.example.yml`](docker-compose.example.yml) runs Muninn next to llama.cpp serving `bge-m3`:
+
+```sh
+cp docker-compose.example.yml docker-compose.yml
+# put bge-m3-Q6_K.gguf in ./models, then:
+docker compose up -d
+```
+
+Without `EMBED_URL`, Muninn searches by text only. Details in [Running Muninn](docs/operations.md#the-embedding-server).
+
+</details>
+
+Then read [Using Muninn](docs/usage.md) for how to write notes that search well.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[AI assistant] -- MCP over HTTP --> M[Muninn]
+    M -- reads and writes --> N[(notes/*.md<br>source of truth)]
+    M -- indexes --> I[(muninn.db<br>SQLite + FTS5 + vectors)]
+    M -. embeds passages .-> E[Embedding server<br>optional]
+    U[You, an editor, git] -- edit --> N
+```
+
+The notes are the source of truth. Muninn keeps an SQLite index beside them: full-text over notes, observations and passages, and vectors cached by passage text so a rename re-embeds nothing. A search runs both sides and fuses the rankings. More in [Architecture](docs/architecture.md).
+
+### A note
+
+```markdown
+---
+title: Coffee brewing
+tags: [coffee]
+---
+
+# Coffee brewing
+
+## Method
+- [method] Pour-over gives a cleaner cup than the French press #brewing
+- [ratio] 1:16 coffee to water, by weight (adjust for the roast)
+
+## Related
+- relates_to [[Coffee beans]]
+```
+
+Headings split the note into passages that are searched on their own. Each `- [category]` line is an observation you can filter by category across every note. Each `- relation [[Note]]` line is an edge in the graph, and a link to a note that does not exist yet resolves once it is written.
 
 ## Tools
 
@@ -50,19 +173,9 @@ Any MCP client that speaks streamable HTTP works the same way. Then see [Using M
 | `mem_schema` | Validate, infer and diff frontmatter schemas (Picoschema). |
 | `mem_man` | The manual, built from the tool descriptions. |
 
-Every parameter is listed in the **[tool reference](docs/tools.md)**.
-
-## Documentation
-
-- **[Using Muninn](docs/usage.md):** writing notes that search well, finding, reading and changing them, and instructions for your assistant.
-- **[Running Muninn](docs/operations.md):** deployment, configuration, the embedding server, backups, upgrades, troubleshooting.
-- **[Architecture](docs/architecture.md):** the note format, the index, how search ranks, writes and safety.
-- **[Tool reference](docs/tools.md):** every tool and parameter.
-- **[Contributing](CONTRIBUTING.md)** and **[security](SECURITY.md)**.
+Every parameter is in the **[tool reference](docs/tools.md)**.
 
 ## Configuration
-
-The common settings:
 
 | Variable | Default | |
 |---|---|---|
@@ -71,13 +184,27 @@ The common settings:
 | `MUNINN_PROJECT` | `main` | The project's name in tool calls and permalinks. |
 | `MUNINN_READ_ONLY` | | `1` hides the four write tools. |
 | `EMBED_URL` | | OpenAI-compatible `/v1/embeddings` server. Unset: text search only. |
+| `EMBED_MODEL` | `bge-m3` | Model name sent to that server. |
 
-All the variables are in [Running Muninn](docs/operations.md#configuration).
+Every variable is in [Running Muninn](docs/operations.md#configuration).
+
+## Documentation
+
+| | |
+|---|---|
+| **[Using Muninn](docs/usage.md)** | Writing notes that search well; finding, reading and changing them; instructions for your assistant. |
+| **[Running Muninn](docs/operations.md)** | Deployment, configuration, the embedding server, backups, upgrades, troubleshooting. |
+| **[Architecture](docs/architecture.md)** | The note format, the index, how search ranks, writes and safety. |
+| **[Tool reference](docs/tools.md)** | Every tool and parameter. |
+| **[Contributing](CONTRIBUTING.md)** · **[Security](SECURITY.md)** · **[Changelog](CHANGELOG.md)** | |
 
 ## Security
 
-The MCP endpoint has no authentication. Bind it to localhost, or put it behind a gateway that authenticates clients. Paths from clients cannot leave the notes folder. See [SECURITY.md](SECURITY.md).
+> [!WARNING]
+> The MCP endpoint has no authentication. Bind it to localhost, or put it behind a gateway that authenticates clients.
+
+Paths from clients cannot leave the notes folder through `..`, hidden segments or symlinks. See [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE).
+[MIT](LICENSE) © Vitor Amaral

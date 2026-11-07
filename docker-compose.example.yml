@@ -1,0 +1,35 @@
+# Muninn next to an OpenAI-compatible embedding server (llama.cpp's llama-server
+# with bge-m3). Without EMBED_URL the search is full-text only.
+# More in docs/operations.md.
+services:
+  muninn:
+    image: muninn-mcp:latest
+    build: .
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      MUNINN_PROJECT: main
+      EMBED_URL: http://embed:8080
+      EMBED_MODEL: bge-m3
+      # MUNINN_READ_ONLY: "1"   # hide the write tools (mount ./notes with :ro too)
+    volumes:
+      - ./notes:/notes          # the knowledge base: back this up
+      - muninn-data:/data       # the index: derived from the notes, safe to delete
+    ports:
+      # No authentication on this endpoint: keep it on localhost or behind a gateway.
+      - "127.0.0.1:8000:8000"
+
+  embed:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    restart: unless-stopped
+    # bge-m3 in GGUF, e.g. from huggingface.co/gpustack/bge-m3-GGUF, in ./models.
+    command: ["-m", "/models/bge-m3-Q6_K.gguf", "--embedding", "--pooling", "cls", "-c", "4096", "-b", "1024", "-ub", "1024",
+              "--alias", "bge-m3", "--host", "0.0.0.0", "--port", "8080"]
+    volumes:
+      - ./models:/models:ro
+
+volumes:
+  muninn-data:

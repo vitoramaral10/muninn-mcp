@@ -1,0 +1,40 @@
+[package]
+name = "muninn-mcp"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+description = "MCP server for a Markdown knowledge base: notes, observations, relations and hybrid search"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/vitoramaral10/muninn-mcp"
+keywords = ["mcp", "mcp-server", "knowledge-base", "markdown", "llm"]
+categories = ["command-line-utilities"]
+publish = false
+
+[dependencies]
+anyhow = "1"
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio"] }
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+env_logger = { version = "0.11", default-features = false }
+log = "0.4"
+# reqwest only talks plain HTTP to the embedding server: no TLS stack.
+reqwest = { version = "0.13", default-features = false, features = ["json"] }
+rmcp = { version = "3.8.0", features = ["server", "macros", "transport-streamable-http-server"] }
+rusqlite = { version = "0.39", features = ["bundled"] }
+schemars = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml_ng = "0.10"
+sha2 = "0.10"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "signal", "net"] }
+unicode-normalization = "0.1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+strip = true

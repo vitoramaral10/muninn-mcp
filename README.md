@@ -10,7 +10,7 @@ An [MCP](https://modelcontextprotocol.io) server in one static Rust binary: hybr
 
 [![ci](https://github.com/vitoramaral10/muninn-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/vitoramaral10/muninn-mcp/actions/workflows/ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) ![Rust](https://img.shields.io/badge/rust-1.99-orange.svg?logo=rust) ![image](https://img.shields.io/badge/image-7%20MB-4c5fd7.svg?logo=docker&logoColor=white) ![MCP](https://img.shields.io/badge/MCP-streamable%20HTTP-6d8cff.svg)
 
-[Quick start](#quick-start) · [How it works](#how-it-works) · [Tools](#tools) · [Docs](#documentation)
+[Website](https://vitoramaral10.github.io/muninn-mcp/) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Tools](#tools) · [Docs](#documentation)
 
 </div>
 

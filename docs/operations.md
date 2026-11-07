@@ -4,7 +4,7 @@
 
 The image is one static binary on `scratch` (about 7 MB). It runs as user `1000:1000`, listens on port 8000, and checks its own health with `muninn-mcp healthcheck`.
 
-[`docker-compose.example.yml`](../docker-compose.example.yml) runs Muninn next to an embedding server. The smallest useful setup:
+[`docker-compose.example.yml`](https://github.com/vitoramaral10/muninn-mcp/blob/main/docker-compose.example.yml) runs Muninn next to an embedding server. The smallest useful setup:
 
 ```yaml
 services:
@@ -31,7 +31,7 @@ services:
 - a base of ~170 notes makes ~9,500 chunks and runs in about 50 MiB resident;
 - a limit of 256 MiB leaves room to grow.
 
-**Exposure.** The endpoint has no authentication. Publish it only on a private network, or put it behind a gateway that authenticates clients. See [SECURITY.md](../SECURITY.md).
+**Exposure.** The endpoint has no authentication. Publish it only on a private network, or put it behind a gateway that authenticates clients. See [SECURITY.md](https://github.com/vitoramaral10/muninn-mcp/blob/main/SECURITY.md).
 
 ## Configuration
 

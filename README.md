@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/logo.svg" alt="Muninn logo: the letter M drawn as a graph of linked notes" width="128" height="128">
+<img src="docs/public/logo.svg" alt="Muninn logo: the letter M drawn as a graph of linked notes" width="128" height="128">
 
 # Muninn
 

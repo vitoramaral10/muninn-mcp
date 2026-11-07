@@ -1,1 +1,6 @@
 /target
+
+# Site
+docs/node_modules
+docs/.vitepress/dist
+docs/.vitepress/cache

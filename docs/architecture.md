@@ -160,4 +160,4 @@ On a real base, known repeats scored 0.86 to 0.97 on the second step and related
 
 - **Paths stay in the notes folder.** A path from a client may not contain `..`, a hidden segment (`.git`, `.obsidian`), a backslash or a NUL byte, and may not pass through a symlink. Any of these is refused before the filesystem is touched.
 - **Read-only mode** (`MUNINN_READ_ONLY=1`) removes the four write tools from the server, so they are neither listed nor callable. Mounting the notes read-only as well makes it a second line of defense.
-- **The HTTP endpoint has no authentication**. Keep it on a private network or behind a gateway that authenticates clients. See [SECURITY.md](../SECURITY.md).
+- **The HTTP endpoint has no authentication**. Keep it on a private network or behind a gateway that authenticates clients. See [SECURITY.md](https://github.com/vitoramaral10/muninn-mcp/blob/main/SECURITY.md).

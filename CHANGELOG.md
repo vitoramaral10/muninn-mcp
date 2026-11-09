@@ -5,7 +5,11 @@ and versions follow [Semantic Versioning](https://semver.org).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-09
+
 ### Added
+- Tool annotations on every tool (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`), so
+  clients can tell the read tools from the write tools and ask before a destructive call.
 - Documentation: a tool reference generated from the tool schemas, an architecture guide, a guide to
   running Muninn, and contributing and security policies.
 - A description for every tool parameter, including `project`, `page` and `output_format`.
@@ -42,5 +46,6 @@ and versions follow [Semantic Versioning](https://semver.org).
 - Paths from clients cannot leave the notes folder through `..`, hidden segments or symlinks.
 - Atomic writes, each with its own temporary file.
 
-[Unreleased]: https://github.com/vitoramaral10/muninn-mcp/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/vitoramaral10/muninn-mcp/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/vitoramaral10/muninn-mcp/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/vitoramaral10/muninn-mcp/releases/tag/v0.1.0

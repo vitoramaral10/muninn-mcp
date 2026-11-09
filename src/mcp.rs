@@ -630,7 +630,8 @@ impl Server {
     }
 
     #[tool(
-        description = "Search the knowledge base, ranked by relevance. `query` supports quoted phrases, AND/OR/NOT and tag:name. `mode` picks hybrid (meaning and words fused; the default when embeddings are configured), text, semantic, title or permalink (globs with *). Narrow with `filters` (frontmatter), `note_types`, `items` (note, observation, relation), `categories` and `since`. `lines` returns each hit's matching lines with context, like grep. `path` limits the search to a folder; `identifier` searches one note. Read full notes with mem_read."
+        description = "Search the knowledge base, ranked by relevance. `query` supports quoted phrases, AND/OR/NOT and tag:name. `mode` picks hybrid (meaning and words fused; the default when embeddings are configured), text, semantic, title or permalink (globs with *). Narrow with `filters` (frontmatter), `note_types`, `items` (note, observation, relation), `categories` and `since`. `lines` returns each hit's matching lines with context, like grep. `path` limits the search to a folder; `identifier` searches one note. Read full notes with mem_read.",
+        annotations(read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = false)
     )]
     async fn mem_search(&self, Parameters(a): Parameters<SearchArgs>) -> R {
         if let Some(p) = &a.project {
@@ -921,7 +922,8 @@ impl Server {
     }
 
     #[tool(
-        description = "Read a note or file by path, permalink, memory:// URL or exact title. Slice a long note with `section` (a heading), `start_line`/`end_line` or `max_tokens`; line numbers count the whole file, frontmatter included. `include_content=false` returns only the metadata and the checksum that mem_write, mem_edit, mem_move and mem_delete take as expected_checksum. Images come back as images. A missing note is an error: find notes with mem_search."
+        description = "Read a note or file by path, permalink, memory:// URL or exact title. Slice a long note with `section` (a heading), `start_line`/`end_line` or `max_tokens`; line numbers count the whole file, frontmatter included. `include_content=false` returns only the metadata and the checksum that mem_write, mem_edit, mem_move and mem_delete take as expected_checksum. Images come back as images. A missing note is an error: find notes with mem_search.",
+        annotations(read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = false)
     )]
     async fn mem_read(&self, Parameters(a): Parameters<ReadArgs>) -> R {
         self.check_project(&a.project)?;
@@ -997,7 +999,8 @@ impl Server {
     }
 
     #[tool(
-        description = "Create or replace a note. Give a file path as `identifier` ('notes/plan.md'), or `title` plus `directory`. The title comes from the content's frontmatter, then `title`, then the file name. An existing note is an error unless `overwrite=true`; pass `expected_checksum` (from mem_read) to replace only the revision you read. To change part of a note use mem_edit. Content may hold frontmatter, observations ('- [category] fact #tag') and relations ('- relation_type [[Other Note]]'). The result lists observations already saved that say nearly what this write added: update one of those rather than keep both."
+        description = "Create or replace a note. Give a file path as `identifier` ('notes/plan.md'), or `title` plus `directory`. The title comes from the content's frontmatter, then `title`, then the file name. An existing note is an error unless `overwrite=true`; pass `expected_checksum` (from mem_read) to replace only the revision you read. To change part of a note use mem_edit. Content may hold frontmatter, observations ('- [category] fact #tag') and relations ('- relation_type [[Other Note]]'). The result lists observations already saved that say nearly what this write added: update one of those rather than keep both.",
+        annotations(read_only_hint = false, destructive_hint = true, idempotent_hint = false, open_world_hint = false)
     )]
     async fn mem_write(&self, Parameters(a): Parameters<WriteArgs>) -> R {
         self.check_project(&a.project)?;
@@ -1197,7 +1200,8 @@ impl Server {
     }
 
     #[tool(
-        description = "Change part of an existing note. `command`: append or prepend `content`; find_replace `find_text` with `content` (exact text that must occur `expected_replacements` times, default 1); replace_section, insert_before_section or insert_after_section for a `section` heading ('Decisions', 'Auth/Decisions', 'Decisions[1]'); set_metadata to merge `metadata` into the frontmatter without touching the body. `metadata` also merges with any other command. Pass `expected_checksum` (from mem_read) to edit only the revision you read. Like mem_write, the result lists observations already saved that say nearly what the edit added. Create notes with mem_write."
+        description = "Change part of an existing note. `command`: append or prepend `content`; find_replace `find_text` with `content` (exact text that must occur `expected_replacements` times, default 1); replace_section, insert_before_section or insert_after_section for a `section` heading ('Decisions', 'Auth/Decisions', 'Decisions[1]'); set_metadata to merge `metadata` into the frontmatter without touching the body. `metadata` also merges with any other command. Pass `expected_checksum` (from mem_read) to edit only the revision you read. Like mem_write, the result lists observations already saved that say nearly what the edit added. Create notes with mem_write.",
+        annotations(read_only_hint = false, destructive_hint = true, idempotent_hint = false, open_world_hint = false)
     )]
     async fn mem_edit(&self, Parameters(a): Parameters<EditArgs>) -> R {
         self.check_project(&a.project)?;
@@ -1255,7 +1259,8 @@ impl Server {
     }
 
     #[tool(
-        description = "Move or rename a note (`identifier`) or a directory (`path`) within the project. `destination` is the new project-relative path; ending it with '/' moves into that folder under the current name. Pass `expected_checksum` (from mem_read) to move a note only if it is still the revision you read. Links by title keep resolving; the permalink in the frontmatter does not change."
+        description = "Move or rename a note (`identifier`) or a directory (`path`) within the project. `destination` is the new project-relative path; ending it with '/' moves into that folder under the current name. Pass `expected_checksum` (from mem_read) to move a note only if it is still the revision you read. Links by title keep resolving; the permalink in the frontmatter does not change.",
+        annotations(read_only_hint = false, destructive_hint = false, idempotent_hint = false, open_world_hint = false)
     )]
     async fn mem_move(&self, Parameters(a): Parameters<MoveArgs>) -> R {
         self.check_project(&a.project)?;
@@ -1305,7 +1310,8 @@ impl Server {
     }
 
     #[tool(
-        description = "Delete a note (`identifier`) or a directory (`path`). A directory delete removes every file under it and needs `recursive=true`. Pass `expected_checksum` (from mem_read) to delete a note only if it is still the revision you read. A note that does not exist is an error. This cannot be undone."
+        description = "Delete a note (`identifier`) or a directory (`path`). A directory delete removes every file under it and needs `recursive=true`. Pass `expected_checksum` (from mem_read) to delete a note only if it is still the revision you read. A note that does not exist is an error. This cannot be undone.",
+        annotations(read_only_hint = false, destructive_hint = true, idempotent_hint = false, open_world_hint = false)
     )]
     async fn mem_delete(&self, Parameters(a): Parameters<DeleteArgs>) -> R {
         self.check_project(&a.project)?;
@@ -1342,7 +1348,8 @@ impl Server {
     }
 
     #[tool(
-        description = "List one folder of the project: its subfolders, then its files with title, date and permalink. '/' lists the root. Filter files with `glob` and order them with `sort`. For a recursive search by name or frontmatter, use mem_find."
+        description = "List one folder of the project: its subfolders, then its files with title, date and permalink. '/' lists the root. Filter files with `glob` and order them with `sort`. For a recursive search by name or frontmatter, use mem_find.",
+        annotations(read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = false)
     )]
     async fn mem_list(&self, Parameters(a): Parameters<ListArgs>) -> R {
         self.check_project(&a.project)?;
@@ -1410,7 +1417,8 @@ impl Server {
     }
 
     #[tool(
-        description = "Find files in the project, recursively. With `name`, match file names against a glob ('*meeting*'). With `filters`, match notes by frontmatter, e.g. {\"status\": \"active\"} or {\"priority\": {\"$in\": [\"high\"]}}, and with `fields` return just those frontmatter values per note. `path` limits the search to a folder. For ranked text or meaning search, use mem_search."
+        description = "Find files in the project, recursively. With `name`, match file names against a glob ('*meeting*'). With `filters`, match notes by frontmatter, e.g. {\"status\": \"active\"} or {\"priority\": {\"$in\": [\"high\"]}}, and with `fields` return just those frontmatter values per note. `path` limits the search to a folder. For ranked text or meaning search, use mem_search.",
+        annotations(read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = false)
     )]
     async fn mem_find(&self, Parameters(a): Parameters<FindArgs>) -> R {
         self.check_project(&a.project)?;
@@ -1475,7 +1483,8 @@ impl Server {
     }
 
     #[tool(
-        description = "Follow the knowledge graph from a note: the note, its observations, and the notes its relations reach (both directions), up to `depth` hops (1-5). `identifier` is a path, permalink, memory:// URL, or a pattern such as 'specs/*'. `since` keeps only related notes changed recently. `compact` returns the graph without note bodies; read chosen notes with mem_read."
+        description = "Follow the knowledge graph from a note: the note, its observations, and the notes its relations reach (both directions), up to `depth` hops (1-5). `identifier` is a path, permalink, memory:// URL, or a pattern such as 'specs/*'. `since` keeps only related notes changed recently. `compact` returns the graph without note bodies; read chosen notes with mem_read.",
+        annotations(read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = false)
     )]
     async fn mem_context(&self, Parameters(a): Parameters<ContextArgs>) -> R {
         self.check_project(&a.project)?;
@@ -1594,7 +1603,8 @@ impl Server {
     }
 
     #[tool(
-        description = "Projects. `command`: list (the project this server holds); recent (what changed lately in `project`: `since`, `items`, paging); create is not supported, this server holds one project."
+        description = "Projects. `command`: list (the project this server holds); recent (what changed lately in `project`: `since`, `items`, paging); create is not supported, this server holds one project.",
+        annotations(read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = false)
     )]
     async fn mem_project(&self, Parameters(a): Parameters<ProjectArgs>) -> R {
         let store = self.store();
@@ -1681,7 +1691,8 @@ impl Server {
     }
 
     #[tool(
-        description = "Note schemas (Picoschema). `command`: validate notes against their schema (one `note_type`, one note by `identifier`, or every type that has a schema); infer a schema from the notes of a `note_type`; diff a `note_type`'s notes against its schema to find drift. A schema is a note with type: schema whose `entity` field names the note type it describes and whose `schema` field maps each field to its type; a field ending in '?' is optional."
+        description = "Note schemas (Picoschema). `command`: validate notes against their schema (one `note_type`, one note by `identifier`, or every type that has a schema); infer a schema from the notes of a `note_type`; diff a `note_type`'s notes against its schema to find drift. A schema is a note with type: schema whose `entity` field names the note type it describes and whose `schema` field maps each field to its type; a field ending in '?' is optional.",
+        annotations(read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = false)
     )]
     async fn mem_schema(&self, Parameters(a): Parameters<SchemaArgs>) -> R {
         self.check_project(&a.project)?;
@@ -1786,7 +1797,8 @@ impl Server {
     }
 
     #[tool(
-        description = "Read this server's manual. With no arguments, the index of every page. `page` reads one tool's page ('mem_search' or 'mem-search(3)'). `query` lists the pages that mention every word given."
+        description = "Read this server's manual. With no arguments, the index of every page. `page` reads one tool's page ('mem_search' or 'mem-search(3)'). `query` lists the pages that mention every word given.",
+        annotations(read_only_hint = true, destructive_hint = false, idempotent_hint = true, open_world_hint = false)
     )]
     async fn mem_man(&self, Parameters(a): Parameters<ManArgs>) -> R {
         let tools = self.tool_router.list_all();
@@ -1896,6 +1908,17 @@ mod tests {
         assert!(ctx(true).get_tool("mem_write").is_none());
         assert!(ctx(true).get_tool("mem_read").is_some());
         assert!(ctx(false).get_tool("mem_write").is_some());
+    }
+
+    #[test]
+    fn every_tool_declares_all_four_hints() {
+        // Hosts warn before destructive calls only when the hints are set; read-only must match WRITE_TOOLS.
+        for t in Server::tool_router().list_all() {
+            let a = t.annotations.as_ref().unwrap_or_else(|| panic!("{} has no annotations", t.name));
+            let ro = a.read_only_hint.unwrap_or_else(|| panic!("{}: no read_only_hint", t.name));
+            assert!(a.destructive_hint.is_some() && a.idempotent_hint.is_some() && a.open_world_hint.is_some(), "{}: missing hint", t.name);
+            assert_eq!(ro, !WRITE_TOOLS.contains(&t.name.as_ref()), "{}: read_only_hint disagrees with WRITE_TOOLS", t.name);
+        }
     }
 
     #[test]

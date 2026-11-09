@@ -36,6 +36,7 @@ cargo test
 
 - **Tests.** A change in behavior comes with a test. A bug fix comes with a test that failed before the fix.
 - **Tool descriptions and parameters.** If you change one, update [`docs/tools.md`](docs/tools.md) to match. The test `tool_reference_matches_the_code` fails when the two differ.
+- **Tool annotations.** A new tool declares all four hints in its `#[tool(annotations(...))]`; a write tool also goes in `WRITE_TOOLS`. The test `every_tool_declares_all_four_hints` checks both.
 - **Parsing.** If you change how notes are parsed (`note.rs`, or `chunks` in `store.rs`), bump `PARSER_VERSION` in `store.rs`, so existing indexes re-read every note.
 - **Compatibility.** The note format is the contract: notes must stay plain Markdown that any editor reads, and a change must keep existing notes parsing the same way.
 - **Changelog.** Add a line under `[Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md) for anything a user would notice.

@@ -6,6 +6,14 @@ Muninn serves one project per server, so `project` may be omitted. The project i
 
 With `MUNINN_READ_ONLY=1` the write tools (`mem_write`, `mem_edit`, `mem_move`, `mem_delete`) are not listed, and calling one returns *tool not found*.
 
+Every tool declares the four MCP tool annotations, so a client can tell the read tools from the write tools and ask before a destructive call. None reaches beyond the notes folder (`openWorldHint: false`).
+
+| Tools | `readOnlyHint` | `destructiveHint` | `idempotentHint` |
+|---|---|---|---|
+| `mem_search`, `mem_read`, `mem_list`, `mem_find`, `mem_context`, `mem_project`, `mem_schema`, `mem_man` | true | false | true |
+| `mem_write`, `mem_edit`, `mem_delete` | false | true | false |
+| `mem_move` | false | false | false |
+
 | Tool | Writes | Summary |
 |---|---|---|
 | [`mem_search`](#mem_search) |  | Search the knowledge base, ranked by relevance. |

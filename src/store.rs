@@ -411,13 +411,13 @@ impl Store {
         let mut slug: HashMap<String, i64> = HashMap::new();
         let prefix = format!("{}/", self.project);
         for (id, title, permalink, path) in &notes {
-            let stem = path.strip_suffix(".md").unwrap_or(path);
+            let stem = path.trim_suffix(".md");
             for k in [title.to_lowercase(), permalink.to_lowercase(), stem.to_lowercase(), path.to_lowercase()] {
                 exact.entry(k).or_insert(*id);
             }
             slug.entry(note::slugify(title)).or_insert(*id);
             slug.entry(note::slugify(stem.rsplit('/').next().unwrap_or(stem))).or_insert(*id);
-            slug.entry(permalink.strip_prefix(&prefix).unwrap_or(permalink).to_string()).or_insert(*id);
+            slug.entry(permalink.trim_prefix(&prefix).to_string()).or_insert(*id);
         }
         let rels: Vec<(i64, String, Option<i64>)> = {
             let mut st = c.prepare("SELECT id, target, target_id FROM relations")?;
@@ -426,7 +426,7 @@ impl Store {
         let tx = c.transaction()?;
         for (id, target, current) in rels {
             let t = target.trim_start_matches("memory://");
-            let t = t.strip_prefix(&prefix).unwrap_or(t);
+            let t = t.trim_prefix(&prefix);
             let found =
                 exact.get(&target.to_lowercase()).or_else(|| exact.get(&t.to_lowercase())).or_else(|| slug.get(&note::slugify(t))).copied();
             if found != current {
@@ -441,7 +441,7 @@ impl Store {
     pub fn resolve(&self, identifier: &str) -> Result<Option<NoteRow>> {
         let id = identifier.trim().trim_start_matches("memory://");
         let prefix = format!("{}/", self.project);
-        let bare = id.strip_prefix(&prefix).unwrap_or(id).trim_start_matches('/');
+        let bare = id.trim_prefix(&prefix).trim_start_matches('/');
         let with_md = if bare.ends_with(".md") { bare.to_string() } else { format!("{bare}.md") };
         let c = self.conn();
         let one = |sql: &str, v: &str| -> Result<Option<NoteRow>> {
@@ -463,7 +463,7 @@ impl Store {
         drop(c);
         Ok(self.all_notes()?.into_iter().find(|n| {
             note::slugify(&n.title) == slug
-                || n.permalink.strip_prefix(&prefix).unwrap_or(&n.permalink) == slug
+                || n.permalink.trim_prefix(&prefix) == slug
                 || note::slugify(n.path.trim_end_matches(".md")) == slug
         }))
     }

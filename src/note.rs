@@ -125,14 +125,14 @@ pub fn file_stem_for_title(title: &str) -> String {
 }
 
 pub fn default_permalink(project: &str, rel_path: &str) -> String {
-    format!("{project}/{}", slugify(rel_path.strip_suffix(".md").unwrap_or(rel_path)))
+    format!("{project}/{}", slugify(rel_path.trim_suffix(".md")))
 }
 
 pub fn parse(project: &str, rel_path: &str, text: &str) -> Note {
     let (yaml, body, body_offset) = split_frontmatter(text);
     let frontmatter = parse_frontmatter(yaml);
     let stem = rel_path.rsplit('/').next().unwrap_or(rel_path);
-    let stem = stem.strip_suffix(".md").unwrap_or(stem);
+    let stem = stem.trim_suffix(".md");
     let title = fm_str(&frontmatter, "title").unwrap_or_else(|| stem.to_string());
     let note_type = fm_str(&frontmatter, "type").unwrap_or_else(|| "note".into());
     let permalink = fm_str(&frontmatter, "permalink").unwrap_or_else(|| default_permalink(project, rel_path));

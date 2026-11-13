@@ -2,7 +2,7 @@
 name = "muninn-mcp"
 version = "0.2.0"
 edition = "2024"
-rust-version = "1.99"
+rust-version = "1.100"
 description = "MCP server for a Markdown knowledge base: notes, observations, relations and hybrid search"
 license = "MIT"
 readme = "README.md"
@@ -38,3 +38,6 @@ opt-level = "z"
 lto = "fat"
 codegen-units = 1
 strip = true
+
+[lints.cargo]
+unused_dependencies = "warn"

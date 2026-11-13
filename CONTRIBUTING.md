@@ -20,7 +20,7 @@ MUNINN_NOTES_DIR=./notes MUNINN_DATA_DIR=./data MCP_HOST=127.0.0.1 cargo run -- 
 Without Rust installed, the same commands run in the toolchain image:
 
 ```sh
-docker run --rm -v "$PWD:/src" -w /src rust:1.99.1-alpine3.24 \
+docker run --rm -v "$PWD:/src" -w /src rust:1.100.0-alpine3.24 \
   sh -c 'apk add -q musl-dev && cargo test'
 ```
 

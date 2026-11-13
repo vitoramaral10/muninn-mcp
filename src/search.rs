@@ -137,7 +137,7 @@ pub fn parse_since(s: &str, now: i64) -> Result<i64> {
     if let Some(span) = named {
         return Ok(now - span);
     }
-    let body = t.strip_suffix(" ago").unwrap_or(&t).trim();
+    let body = t.trim_suffix(" ago").trim();
     let split = body.find(|c: char| !c.is_ascii_digit()).unwrap_or(body.len());
     if split > 0 {
         let n: i64 = body[..split].parse()?;

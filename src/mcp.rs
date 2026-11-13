@@ -179,7 +179,7 @@ fn same_numbers(a: &str, b: &str) -> bool {
 
 fn clean_rel(project: &str, p: &str) -> Result<String, Fail> {
     let p = p.trim().trim_start_matches("memory://");
-    let p = p.strip_prefix(&format!("{project}/")).unwrap_or(p).trim_matches('/');
+    let p = p.trim_prefix(&format!("{project}/")).trim_matches('/');
     if p.split('/').any(|seg| seg == ".." || seg.starts_with('.')) || p.contains('\\') || p.contains('\0') {
         return bad_args(format!("path {p:?} must stay inside the project and not name hidden files"));
     }
@@ -796,7 +796,7 @@ impl Server {
                 continue;
             }
             let field = if mode == Mode::Title { n.title.clone() } else { n.permalink.clone() };
-            let bare = field.strip_prefix(&prefix).unwrap_or(&field).to_string();
+            let bare = field.trim_prefix(&prefix).to_string();
             let score = if qs.contains('*') || qs.contains('?') {
                 if search::glob(qs, &field) || search::glob(qs, &bare) { 1.0 } else { 0.0 }
             } else {
@@ -1431,7 +1431,7 @@ impl Server {
         let mut rows: Vec<Value> = Vec::new();
         for rel in store::walk_all(&store.root) {
             let inside = dir.is_empty() || rel.starts_with(&format!("{dir}/"));
-            let below = rel.strip_prefix(&format!("{dir}/")).unwrap_or(&rel);
+            let below = rel.trim_prefix(&format!("{dir}/"));
             if !inside || below.matches('/').count() >= depth {
                 continue;
             }
@@ -1492,11 +1492,11 @@ impl Server {
         let prefix = format!("{}/", store.project);
         let pattern = a.identifier.trim().trim_start_matches("memory://");
         let primaries: Vec<NoteRow> = if pattern.contains('*') {
-            let p = pattern.strip_prefix(&prefix).unwrap_or(pattern);
+            let p = pattern.trim_prefix(&prefix);
             store
                 .all_notes()?
                 .into_iter()
-                .filter(|n| search::glob(p, &n.path) || search::glob(p, n.permalink.strip_prefix(&prefix).unwrap_or(&n.permalink)))
+                .filter(|n| search::glob(p, &n.path) || search::glob(p, n.permalink.trim_prefix(&prefix)))
                 .collect()
         } else {
             vec![store.require(&a.identifier)?]

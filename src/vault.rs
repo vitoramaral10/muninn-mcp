@@ -39,7 +39,7 @@ pub fn render(fm: &Mapping, body: &str) -> Result<String> {
         return Ok(body.to_string());
     }
     let yaml = serde_yaml_ng::to_string(fm)?;
-    let body = body.strip_prefix('\n').unwrap_or(body);
+    let body = body.trim_prefix('\n');
     Ok(format!("---\n{yaml}---\n\n{body}"))
 }
 

@@ -5,6 +5,12 @@ and versions follow [Semantic Versioning](https://semver.org).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-15
+
+### Security
+- The bundled SQLite is now 3.54.1 (`rusqlite` 0.43), which fixes RUSTSEC-2026-0459 (CVE-2026-119375).
+- `rmcp` 3.10, which fixes RUSTSEC-2026-0462.
+
 ## [0.2.0] - 2026-11-09
 
 ### Added
@@ -46,6 +52,7 @@ and versions follow [Semantic Versioning](https://semver.org).
 - Paths from clients cannot leave the notes folder through `..`, hidden segments or symlinks.
 - Atomic writes, each with its own temporary file.
 
-[Unreleased]: https://github.com/vitoramaral10/muninn-mcp/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/vitoramaral10/muninn-mcp/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/vitoramaral10/muninn-mcp/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/vitoramaral10/muninn-mcp/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/vitoramaral10/muninn-mcp/releases/tag/v0.1.0

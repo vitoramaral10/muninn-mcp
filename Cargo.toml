@@ -25,7 +25,9 @@ rusqlite = { version = "0.43", features = ["bundled"] }
 schemars = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-serde_yaml_ng = "0.10"
+# yaml_serde (maintained by the YAML Organization) replaces serde_yaml_ng, unmaintained since 2024 and
+# built on the unmaintained unsafe-libyaml. Same serde_yaml API; the old name keeps the code unchanged.
+serde_yaml_ng = { package = "yaml_serde", version = "0.10.7" }
 sha2 = "0.10"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "signal", "net"] }
 unicode-normalization = "0.1"

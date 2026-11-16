@@ -5,6 +5,13 @@ and versions follow [Semantic Versioning](https://semver.org).
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-15
+
+### Security
+- YAML front matter is parsed with `yaml_serde`, maintained by the YAML Organization, instead of `serde_yaml_ng`
+  and its unmaintained `unsafe-libyaml` (RUSTSEC-2024-0449).
+- The documentation site builds with Vite 6.4 and esbuild 0.25, clearing the Vite 5 and esbuild 0.21 advisories.
+
 ## [0.2.1] - 2026-11-15
 
 ### Security
@@ -52,7 +59,8 @@ and versions follow [Semantic Versioning](https://semver.org).
 - Paths from clients cannot leave the notes folder through `..`, hidden segments or symlinks.
 - Atomic writes, each with its own temporary file.
 
-[Unreleased]: https://github.com/vitoramaral10/muninn-mcp/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/vitoramaral10/muninn-mcp/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/vitoramaral10/muninn-mcp/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/vitoramaral10/muninn-mcp/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/vitoramaral10/muninn-mcp/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/vitoramaral10/muninn-mcp/releases/tag/v0.1.0

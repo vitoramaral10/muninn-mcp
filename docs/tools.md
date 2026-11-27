@@ -14,6 +14,8 @@ Every tool declares the four MCP tool annotations, so a client can tell the read
 | `mem_write`, `mem_edit`, `mem_delete` | false | true | false |
 | `mem_move` | false | false | false |
 
+A client that can ask its user (MCP 2026-07-28, form elicitation) is asked to confirm before `mem_delete` removes anything; a refusal deletes nothing. `mem_move` never asks: it refuses a destination that exists, so it overwrites nothing.
+
 | Tool | Writes | Summary |
 |---|---|---|
 | [`mem_search`](#mem_search) |  | Search the knowledge base, ranked by relevance. |
@@ -33,7 +35,7 @@ Every tool declares the four MCP tool annotations, so a client can tell the read
 
 Tools answer in readable text by default. With `output_format: "json"` they answer with one JSON document instead, which suits programs and long result lists.
 
-A call that cannot be done (an unknown note or project, a checksum that no longer matches, a note that already exists) comes back as a tool result marked `isError`, with the reason as text, so the model can read it and try again. A request that is wrong in itself is a protocol error (`invalid_params`): a missing required parameter, a value of the wrong type, or a path that leaves the notes folder (`..`, a hidden segment, a symlink).
+A call that cannot be done (an unknown note or project, a checksum that no longer matches, a note that already exists) comes back as a tool result marked `isError`, with the reason as text, so the model can read it and try again. So does a request that is wrong in itself: a missing required parameter, a value of the wrong type, or a path that leaves the notes folder (`..`, a hidden segment, a symlink). Only a malformed JSON-RPC request is a protocol error.
 
 ## mem_search
 

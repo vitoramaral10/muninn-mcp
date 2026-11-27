@@ -5,6 +5,18 @@ and versions follow [Semantic Versioning](https://semver.org).
 
 ## [Unreleased]
 
+### Added
+- MCP 2026-07-28: a client that can ask its user (form elicitation) is asked to confirm, through
+  `input_required`, before `mem_delete` removes a note or a folder; a refusal deletes nothing. Clients
+  without elicitation, and older protocol versions, work as before.
+- `server/discover` and `tools/list` say they may be cached for an hour by anyone (`ttlMs`, `cacheScope: public`);
+  the server's title is `Muninn`.
+
+### Changed
+- Bad arguments (two targets at once, a section command without `section`) are a tool error with the
+  message, like any other failure, instead of a JSON-RPC invalid_params error.
+- `rmcp` 3.10 at least.
+
 ## [0.2.2] - 2026-11-15
 
 ### Security

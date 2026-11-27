@@ -35,12 +35,11 @@ pub struct Server {
     tool_router: ToolRouter<Server>,
 }
 
-/// A failed call: `Tool` reaches the caller as an `isError` result with the
-/// message; `Args` stays a JSON-RPC invalid_params error.
+/// A failed call; it reaches the caller as an `isError` result with the message, bad arguments
+/// included, so the model can read it and correct the call (MCP 2026-07-28).
 #[derive(Debug)]
 enum Fail {
     Tool(String),
-    Args(ErrorData),
 }
 
 impl From<anyhow::Error> for Fail {
@@ -59,17 +58,12 @@ impl IntoCallToolResult for Fail {
     fn into_call_tool_result(self) -> Result<CallToolResponse, ErrorData> {
         match self {
             Fail::Tool(message) => Ok(CallToolResult::error(vec![ContentBlock::text(message)]).into()),
-            Fail::Args(e) => Err(e),
         }
     }
 }
 
 fn fail<T>(message: impl Into<String>) -> Result<T, Fail> {
     Err(Fail::Tool(message.into()))
-}
-
-fn bad_args<T>(message: impl Into<String>) -> Result<T, Fail> {
-    Err(Fail::Args(ErrorData::invalid_params(message.into(), None)))
 }
 
 type R = Result<CallToolResult, Fail>;
@@ -181,7 +175,7 @@ fn clean_rel(project: &str, p: &str) -> Result<String, Fail> {
     let p = p.trim().trim_start_matches("memory://");
     let p = p.trim_prefix(&format!("{project}/")).trim_matches('/');
     if p.split('/').any(|seg| seg == ".." || seg.starts_with('.')) || p.contains('\\') || p.contains('\0') {
-        return bad_args(format!("path {p:?} must stay inside the project and not name hidden files"));
+        return fail(format!("path {p:?} must stay inside the project and not name hidden files"));
     }
     Ok(p.to_string())
 }
@@ -193,7 +187,7 @@ fn inside(store: &Store, p: &str) -> Result<String, Fail> {
     for seg in rel.split('/').filter(|s| !s.is_empty()) {
         at.push(seg);
         match std::fs::symlink_metadata(&at) {
-            Ok(m) if m.file_type().is_symlink() => return bad_args(format!("path {p:?} goes through a symlink")),
+            Ok(m) if m.file_type().is_symlink() => return fail(format!("path {p:?} goes through a symlink")),
             Ok(_) => {}
             Err(_) => break,
         }
@@ -780,7 +774,7 @@ impl Server {
                         }
                     }
                 }
-                other => return bad_args(format!("unknown item kind {other:?}; use note, observation or relation")),
+                other => return fail(format!("unknown item kind {other:?}; use note, observation or relation")),
             }
         }
         let (page, total) = paginate(found, a.page, a.page_size);
@@ -1013,10 +1007,10 @@ impl Server {
                 let file = format!("{}.md", note::file_stem_for_title(t));
                 if dir.is_empty() { file } else { format!("{dir}/{file}") }
             }
-            (None, None) => return bad_args("give `identifier` (a file path) or `title` (with an optional `directory`)"),
+            (None, None) => return fail("give `identifier` (a file path) or `title` (with an optional `directory`)"),
         };
         if rel.is_empty() || rel == ".md" {
-            return bad_args("the note needs a file name");
+            return fail("the note needs a file name");
         }
         let path = store.abs(&rel);
         let existing = if path.exists() { store.resolve(&rel)? } else { None };
@@ -1212,20 +1206,20 @@ impl Server {
         let need = |what: &str| -> Result<&str, Fail> {
             match content {
                 Some(c) => Ok(c),
-                None => bad_args(format!("{what} needs `content`")),
+                None => fail(format!("{what} needs `content`")),
             }
         };
         let section = || -> Result<&str, Fail> {
             match a.section.as_deref() {
                 Some(s) if !s.trim().is_empty() => Ok(s),
-                _ => bad_args("section commands need `section`"),
+                _ => fail("section commands need `section`"),
             }
         };
         let mut edited = match a.command {
             EditCommand::Append => vault::apply(&raw, Edit::Append(need("append")?))?,
             EditCommand::Prepend => vault::apply(&raw, Edit::Prepend(need("prepend")?))?,
             EditCommand::FindReplace => {
-                let Some(find) = a.find_text.as_deref() else { return bad_args("find_replace needs `find_text`") };
+                let Some(find) = a.find_text.as_deref() else { return fail("find_replace needs `find_text`") };
                 vault::apply(&raw, Edit::FindReplace { find, replace: need("find_replace")?, expected: a.expected_replacements.max(1) })?
             }
             EditCommand::ReplaceSection => vault::apply(
@@ -1240,7 +1234,7 @@ impl Server {
             }
             EditCommand::SetMetadata => {
                 if a.metadata.is_none() {
-                    return bad_args("set_metadata needs `metadata`");
+                    return fail("set_metadata needs `metadata`");
                 }
                 raw.clone()
             }
@@ -1292,7 +1286,7 @@ impl Server {
                 }
                 (from, to)
             }
-            _ => return bad_args("give exactly one of `identifier` (a note) or `path` (a directory)"),
+            _ => return fail("give exactly one of `identifier` (a note) or `path` (a directory)"),
         };
         if to.is_empty() || store.abs(&to).exists() {
             return fail(format!("{to:?} already exists or is not a valid destination"));
@@ -1337,7 +1331,7 @@ impl Server {
                 std::fs::remove_dir_all(store.abs(&rel))?;
                 format!("{rel}/")
             }
-            _ => return bad_args("give exactly one of `identifier` (a note) or `path` (a directory)"),
+            _ => return fail("give exactly one of `identifier` (a note) or `path` (a directory)"),
         };
         store.sync()?;
         self.ctx.vectors.mark_stale();
@@ -1423,7 +1417,7 @@ impl Server {
     async fn mem_find(&self, Parameters(a): Parameters<FindArgs>) -> R {
         self.check_project(&a.project)?;
         if a.name.is_some() && a.filters.is_some() {
-            return bad_args("use `name` or `filters`, not both");
+            return fail("use `name` or `filters`, not both");
         }
         let store = self.store();
         let dir = inside(store, &a.path)?;
@@ -1634,7 +1628,7 @@ impl Server {
                 fail("This server holds one project; creating projects is not supported")
             }
             ProjectCommand::Recent => {
-                let Some(p) = &a.project else { return bad_args("recent needs `project`") };
+                let Some(p) = &a.project else { return fail("recent needs `project`") };
                 self.check_project(p)?;
                 let since = search::parse_since(&a.since, now())?;
                 let items = a.items.clone().unwrap_or_else(|| vec!["note".into()]);
@@ -1668,7 +1662,7 @@ impl Server {
                                 }
                             }
                         }
-                        other => return bad_args(format!("unknown item kind {other:?}")),
+                        other => return fail(format!("unknown item kind {other:?}")),
                     }
                 }
                 rows.sort_by_key(|r| std::cmp::Reverse(r.0));
@@ -1708,7 +1702,7 @@ impl Server {
         let field_name = |k: &str| k.trim_end_matches('?').to_string();
         let out: Value = match a.command {
             SchemaCommand::Infer => {
-                let Some(t) = &a.note_type else { return bad_args("infer needs `note_type`") };
+                let Some(t) = &a.note_type else { return fail("infer needs `note_type`") };
                 let group = of_type(t);
                 if group.is_empty() {
                     return fail(format!("No notes of type {t:?}"));
@@ -1746,7 +1740,7 @@ impl Server {
                     (Some(id), _) => vec![self.store().require(id)?.note_type],
                     (None, Some(t)) => vec![t.clone()],
                     (None, None) if matches!(a.command, SchemaCommand::Validate) => schemas.keys().cloned().collect(),
-                    _ => return bad_args("diff needs `note_type`"),
+                    _ => return fail("diff needs `note_type`"),
                 };
                 let mut reports = Vec::new();
                 for t in types {
@@ -1837,16 +1831,88 @@ impl Server {
     }
 }
 
+/// How long a client may cache what changes only with a release: discovery and the tool list.
+const STATIC_TTL_MS: u64 = 3_600_000;
+
+/// The key of the confirmation in the MRTR inputRequests.
+const CONFIRM: &str = "confirmar";
+
+/// What the user confirms before a call runs: only what cannot be undone. mem_move is not here
+/// because it never overwrites (a destination that exists is refused); mem_write with overwrite
+/// replaces a note, but so does mem_edit, and both are the ordinary way to change one.
+fn confirm_message(name: &str, args: Option<&JsonObject>) -> Option<String> {
+    let arg = |k: &str| args.and_then(|a| a.get(k)).and_then(Value::as_str);
+    match (name, arg("identifier"), arg("path")) {
+        ("mem_delete", Some(id), None) => Some(format!("Apagar a nota {id} do Muninn. Não dá para desfazer. Confirma?")),
+        // Without recursive the tool refuses a directory, so there is nothing to confirm.
+        ("mem_delete", None, Some(p)) if args.and_then(|a| a.get("recursive")) == Some(&Value::Bool(true)) => {
+            Some(format!("Apagar a pasta {p} do Muninn, com tudo o que tem dentro. Não dá para desfazer. Confirma?"))
+        }
+        _ => None,
+    }
+}
+
+/// Asks the user, by elicitation, before a call that cannot be undone; None lets the call run.
+///
+/// A client that cannot ask goes on as before: no form elicitation in this request, or a session
+/// older than 2026-07-28, where input_required would reach it as a protocol error. There the
+/// destructiveHint is what makes the host ask.
+fn confirmation(request: &CallToolRequestParams, context: &rmcp::service::RequestContext<rmcp::RoleServer>) -> Option<CallToolResponse> {
+    let modern = context.protocol_version().is_some_and(|v| v.as_str() >= ProtocolVersion::V_2026_07_28.as_str());
+    // elicitation {} with no mode counts as form (spec compatibility).
+    let form = context.client_capabilities().and_then(|c| c.elicitation).is_some_and(|e| e.form.is_some() || e.url.is_none());
+    if !(modern && form) {
+        return None;
+    }
+    let message = confirm_message(&request.name, request.arguments.as_ref())?;
+    let Some(answer) = request.input_responses.as_ref().and_then(|r| r.get(CONFIRM)) else {
+        let ask =
+            ElicitRequestParams::FormElicitationParams { meta: None, message, requested_schema: ElicitationSchema::new(BTreeMap::new()) };
+        let asks = BTreeMap::from([(CONFIRM.to_string(), InputRequest::Elicitation(ElicitRequest::new(ask)))]);
+        return Some(InputRequiredResult::from_input_requests(asks).into());
+    };
+    // Anything but a well-formed accept counts as no.
+    if serde_json::from_value::<ElicitResult>(answer.clone()).is_ok_and(|r| r.action == ElicitationAction::Accept) {
+        return None;
+    }
+    Some(
+        CallToolResult::success(vec![ContentBlock::text("O usuário não confirmou; nada foi alterado. Não tente de novo sem ele pedir.")])
+            .into(),
+    )
+}
+
 #[tool_handler(router = self.tool_router)]
 impl ServerHandler for Server {
     fn get_info(&self) -> ServerConfig {
         ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
-            .with_server_info(Implementation::new("muninn-mcp", env!("CARGO_PKG_VERSION")))
+            .with_server_info(Implementation::new("muninn-mcp", env!("CARGO_PKG_VERSION")).with_title("Muninn"))
             .with_instructions(
                 "A Markdown knowledge base: notes with frontmatter, observations ('- [category] fact #tag') \
                  and relations ('- relation_type [[Other Note]]'). Search with mem_search (hybrid by default), read with mem_read, \
                  follow links with mem_context, and write with mem_write and mem_edit. This server holds one project, so `project` may be omitted.",
             )
+    }
+
+    /// The discovery result changes only with a new release: the same for every caller.
+    async fn discover(&self, _context: rmcp::service::RequestContext<rmcp::RoleServer>) -> Result<DiscoverResult, ErrorData> {
+        Ok(DiscoverResult::from_server_info(self.supported_protocol_versions().into_owned(), self.get_info())
+            .with_ttl_ms(STATIC_TTL_MS)
+            .with_cache_scope(CacheScope::Public))
+    }
+
+    /// The tool list is fixed at startup (MUNINN_READ_ONLY) and holds no note data.
+    async fn list_tools(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> Result<ListToolsResult, ErrorData> {
+        // Peers before 2026-07-28 do not know the hints.
+        let hints = context.protocol_version().is_some_and(|v| v.as_str() >= ProtocolVersion::V_2026_07_28.as_str());
+        let mut result = ListToolsResult::with_all_items(self.tool_router.list_all());
+        if hints {
+            result = result.with_ttl_ms(STATIC_TTL_MS).with_cache_scope(CacheScope::Public);
+        }
+        Ok(result)
     }
 
     /// The router's dispatch, plus one log line per call: what was used, how long it took, how much came back.
@@ -1859,8 +1925,10 @@ impl ServerHandler for Server {
         let name = request.name.to_string();
         let mode = request.arguments.as_ref().and_then(|a| a.get("mode")).and_then(Value::as_str).map(str::to_owned);
         let started = std::time::Instant::now();
-        let tcc = rmcp::handler::server::tool::ToolCallContext::new(self, request, context);
-        let result = self.tool_router.call(tcc).await;
+        let result = match confirmation(&request, &context) {
+            Some(early) => Ok(early),
+            None => self.tool_router.call(rmcp::handler::server::tool::ToolCallContext::new(self, request, context)).await,
+        };
         let ms = started.elapsed().as_millis();
         let mode = mode.map(|m| format!(" mode={m}")).unwrap_or_default();
         match &result {
@@ -1999,6 +2067,164 @@ mod tests {
         assert!(same_numbers("Weight 117,0 kg at 07:50", "Weight 117,0 kg at 07:50 (manual entry)"));
         assert!(!same_numbers("Weight 117,0 kg at 07:50", "Weight 116,7 kg at 06:41"));
         assert!(!worth_comparing("Next steps:"));
+    }
+
+    /// The server as main serves it, on a free port, with a real rmcp client on the other end.
+    mod end_to_end {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        use rmcp::service::{ClientLifecycleMode, ClientServiceExt, RequestContext, RunningService};
+        use rmcp::transport::StreamableHttpClientTransport;
+        use rmcp::transport::streamable_http_server::{
+            StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
+        };
+        use rmcp::{RoleClient, ServiceExt};
+
+        use super::*;
+
+        /// The user behind the client: what they answer, and how many times they were asked.
+        /// `None` is a client that declares no elicitation.
+        #[derive(Clone)]
+        struct User {
+            answer: Option<ElicitationAction>,
+            asked: Arc<AtomicUsize>,
+        }
+
+        impl rmcp::ClientHandler for User {
+            fn get_info(&self) -> ClientConfig {
+                // What the gateway forwards: the form mode, spelled out.
+                let caps = if self.answer.is_some() { json!({"elicitation": {"form": {}}}) } else { json!({}) };
+                ClientConfig::new(serde_json::from_value(caps).unwrap(), Implementation::new("teste", "1"))
+            }
+
+            async fn create_elicitation(
+                &self,
+                _request: ElicitRequestParams,
+                _context: RequestContext<RoleClient>,
+            ) -> Result<ElicitResult, ErrorData> {
+                self.asked.fetch_add(1, Ordering::SeqCst);
+                Ok(ElicitResult::new(self.answer.clone().expect("asked a client without elicitation")))
+            }
+        }
+
+        async fn serve(files: &[(&str, &str)]) -> (tempfile::TempDir, String) {
+            let (dir, store) = crate::store::tests::store_with(files);
+            let vectors = Arc::new(crate::embed::Vectors::default());
+            let ctx =
+                Arc::new(Ctx { store: Arc::new(store), embedder: None, vectors, read_only: false, project_id: None, demoted: vec![] });
+            let service = StreamableHttpService::new(
+                move || Ok(Server::new(Arc::clone(&ctx))),
+                LocalSessionManager::default().into(),
+                StreamableHttpServerConfig::default().disable_allowed_hosts(),
+            );
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let url = format!("http://{}/mcp", listener.local_addr().unwrap());
+            tokio::spawn(axum::serve(listener, axum::Router::new().nest_service("/mcp", service)).into_future());
+            (dir, url)
+        }
+
+        async fn connect(url: &str, user: &User, modern: bool) -> RunningService<RoleClient, User> {
+            let transport = StreamableHttpClientTransport::from_uri(url.to_string());
+            if modern {
+                let lifecycle = ClientLifecycleMode::Discover { preferred_versions: vec![ProtocolVersion::V_2026_07_28] };
+                user.clone().serve_with_lifecycle(transport, lifecycle).await.unwrap()
+            } else {
+                user.clone().serve(transport).await.unwrap()
+            }
+        }
+
+        async fn call(client: &RunningService<RoleClient, User>, name: &'static str, args: Value) -> (bool, String) {
+            let r = client.call_tool(CallToolRequestParams::new(name).with_arguments(args.as_object().unwrap().clone())).await.unwrap();
+            let body = r.content.iter().filter_map(|c| c.as_text().map(|t| t.text.clone())).collect();
+            (r.is_error == Some(true), body)
+        }
+
+        fn user(answer: Option<ElicitationAction>) -> User {
+            User { answer, asked: Arc::new(AtomicUsize::new(0)) }
+        }
+
+        #[tokio::test]
+        async fn deleting_asks_the_user_and_only_accept_deletes() {
+            let (dir, url) = serve(&[("a.md", "# A\n"), ("b.md", "# B\n"), ("c.md", "# C\n"), ("d/x.md", "# X\n")]).await;
+            let exists = |rel: &str| dir.path().join("notes").join(rel).exists();
+            for (answer, note) in [(ElicitationAction::Decline, "a.md"), (ElicitationAction::Cancel, "a.md")] {
+                let u = user(Some(answer));
+                let client = connect(&url, &u, true).await;
+                assert_eq!(client.peer_info().unwrap().protocol_version, ProtocolVersion::V_2026_07_28);
+                let (is_error, body) = call(&client, "mem_delete", json!({"identifier": note})).await;
+                assert!(!is_error && body.contains("nada foi alterado"), "{body}");
+                assert!(exists(note), "a refusal reached the delete");
+                assert_eq!(u.asked.load(Ordering::SeqCst), 1);
+            }
+            let u = user(Some(ElicitationAction::Accept));
+            let client = connect(&url, &u, true).await;
+            let (is_error, body) = call(&client, "mem_delete", json!({"identifier": "a.md"})).await;
+            assert!(!is_error && body.starts_with("Deleted a.md"), "{body}");
+            assert!(!exists("a.md"));
+            // A folder asks too; without recursive the tool refuses it, so it does not ask.
+            let (is_error, _) = call(&client, "mem_delete", json!({"path": "d"})).await;
+            assert!(is_error && exists("d/x.md"));
+            assert_eq!(u.asked.load(Ordering::SeqCst), 1);
+            let (is_error, _) = call(&client, "mem_delete", json!({"path": "d", "recursive": true})).await;
+            assert!(!is_error && !exists("d/x.md"));
+            assert_eq!(u.asked.load(Ordering::SeqCst), 2);
+            // Reads, writes and moves never ask.
+            let before = u.asked.load(Ordering::SeqCst);
+            assert!(!call(&client, "mem_read", json!({"identifier": "b.md"})).await.0);
+            assert!(!call(&client, "mem_move", json!({"identifier": "b.md", "destination": "e/b.md"})).await.0);
+            assert!(!call(&client, "mem_write", json!({"identifier": "f.md", "content": "# F\n"})).await.0);
+            assert_eq!(u.asked.load(Ordering::SeqCst), before);
+            // A client without elicitation, on either lifecycle, deletes as before.
+            for modern in [true, false] {
+                let u = user(None);
+                let client = connect(&url, &u, modern).await;
+                let note = if modern { "c.md" } else { "f.md" };
+                let (is_error, body) = call(&client, "mem_delete", json!({"identifier": note})).await;
+                assert!(!is_error && !exists(note), "{body}");
+            }
+            // A legacy session that declares elicitation cannot take input_required: it deletes as before.
+            let u = user(Some(ElicitationAction::Decline));
+            let client = connect(&url, &u, false).await;
+            assert_eq!(client.peer_info().unwrap().protocol_version, ProtocolVersion::V_2025_11_25);
+            let (is_error, body) = call(&client, "mem_delete", json!({"identifier": "e/b.md"})).await;
+            assert!(!is_error && !exists("e/b.md"), "{body}");
+            assert_eq!(u.asked.load(Ordering::SeqCst), 0);
+        }
+
+        #[tokio::test]
+        async fn discovery_and_the_tool_list_are_public_for_an_hour() {
+            let (_dir, url) = serve(&[]).await;
+            let client = connect(&url, &user(None), true).await;
+            let tools = client.list_tools(None).await.unwrap();
+            assert_eq!((tools.ttl_ms, tools.cache_scope), (Some(STATIC_TTL_MS), Some(CacheScope::Public)));
+            // server/discover by hand: the client keeps only the negotiated version.
+            let meta = json!({
+                "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                "io.modelcontextprotocol/clientInfo": {"name": "teste", "version": "1"},
+                "io.modelcontextprotocol/clientCapabilities": {},
+            });
+            let body = reqwest::Client::new()
+                .post(&url)
+                .header("Accept", "application/json, text/event-stream")
+                .header("MCP-Protocol-Version", "2026-07-28")
+                .header("Mcp-Method", "server/discover")
+                .json(&json!({"jsonrpc": "2.0", "id": 1, "method": "server/discover", "params": {"_meta": meta}}))
+                .send()
+                .await
+                .unwrap()
+                .text()
+                .await
+                .unwrap();
+            let data = body.lines().find_map(|l| l.strip_prefix("data:")).map_or(body.as_str(), str::trim);
+            let r: Value = serde_json::from_str(data).unwrap_or_else(|e| panic!("{e}: {body}"));
+            let r = &r["result"];
+            assert!(!r.is_null(), "{body}");
+            assert_eq!((r["ttlMs"].as_u64(), r["cacheScope"].as_str()), (Some(STATIC_TTL_MS), Some("public")), "{r}");
+            assert!(r["supportedVersions"].as_array().unwrap().contains(&json!("2026-07-28")), "{r}");
+            let info = &r["_meta"]["io.modelcontextprotocol/serverInfo"];
+            assert_eq!((info["name"].as_str(), info["title"].as_str()), (Some("muninn-mcp"), Some("Muninn")), "{r}");
+            assert!(r["instructions"].as_str().is_some_and(|i| !i.is_empty()));
+        }
     }
 
     #[test]
